@@ -7,8 +7,8 @@ $group_id = (int) ($data->group_id ?? 0);
 require_once __DIR__ . '/files/setup.php';
 use \VKHP\Method as VKHPM;
 
-if ($data->type === 'confirmation') { die($config['confirm_token']); }
 // if ($data->secret !== $config['secret_key']) { die('ok'); }
+if ($data->type === 'confirmation') { die($config['confirm_token']); }
 
 
 $object = $data->object;
