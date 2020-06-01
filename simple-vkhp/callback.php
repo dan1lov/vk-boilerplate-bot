@@ -29,6 +29,7 @@ switch ($data->type) {
             if (strpos_array($message, $command['aliases']) !== 0) {continue;}
 
             $parameters = $command['exec']($object, $config, $user_id);
+            break;
         }
 
         if (! empty($parameters)) {
