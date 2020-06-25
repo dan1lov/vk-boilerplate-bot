@@ -25,7 +25,7 @@ switch ($data->type) {
 
         if (isset($answer)) {
             api('messages.send', [
-                'user_ids' => $peer_id,
+                'peer_id' => $peer_id,
                 'message' => $answer,
                 'keyboard' => $keyboard ?? null,
                 'attachment' => $attachment ?? null,
