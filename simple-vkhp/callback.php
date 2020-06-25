@@ -34,7 +34,7 @@ switch ($data->type) {
 
         if (! empty($parameters)) {
             VKHPM::messagesSend($config['access_token'], [
-                'user_ids' => $peer_id,
+                'peer_id' => $peer_id,
                 'message' => $parameters[0] ?? 'null',
                 'keyboard' => $parameters[1] ?? null,
                 'attachment' => $parameters[2] ?? null,
