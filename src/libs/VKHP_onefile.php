@@ -1,4 +1,4 @@
-<?php
+<?php // github.com/dan1lov/php-vkhp
 namespace VKHP;
 
 /**
@@ -61,17 +61,19 @@ class Generator
      * @param string     $label   Button label
      * @param string     $color   Button color
      * @param array|null $payload Button payload
+     * @param string     $type    Button type (text|callback)
      *
      * @return array
      */
     public static function button(
         string $label,
         string $color = self::WHITE,
-        ?array $payload = null
+        ?array $payload = null,
+        string $type = 'text'
     ): array {
         return [
             'action' => [
-                'type' => 'text',
+                'type' => $type,
                 'label' => $label,
                 'payload' => self::payloadEncode($payload)
             ],
@@ -82,23 +84,18 @@ class Generator
     /**
      * Generate button with type open_link
      *
-     * @param string     $label   Button label
-     * @param string     $link    Link in button
-     * @param array|null $payload Button payload
+     * @param string $label Button label
+     * @param string $link  Link in button
      *
      * @return array
      */
-    public static function buttonLink(
-        string $label,
-        string $link,
-        ?array $payload = null
-    ): array {
+    public static function buttonLink(string $label, string $link): array
+    {
         return [
             'action' => [
                 'type' => 'open_link',
                 'link' => $link,
-                'label' => $label,
-                'payload' => self::payloadEncode($payload)
+                'label' => $label
             ]
         ];
     }
@@ -123,18 +120,16 @@ class Generator
     /**
      * Generate button with type vkpay
      *
-     * @param string     $hash    Hash for button
-     * @param array|null $payload Button payload
+     * @param string $hash Hash for button
      *
      * @return array
      */
-    public static function buttonVKPay(string $hash, ?array $payload = null): array
+    public static function buttonVKPay(string $hash): array
     {
         return [
             'action' => [
                 'type' => 'vkpay',
-                'hash' => $hash,
-                'payload' => self::payloadEncode($payload)
+                'hash' => $hash
             ]
         ];
     }
@@ -142,31 +137,39 @@ class Generator
     /**
      * Generate button with type open_app
      *
-     * @param string     $label    Button label
-     * @param integer    $app_id   Application id
-     * @param integer    $owner_id Owner id
-     * @param string     $hash     Hash for button
-     * @param array|null $payload  Button payload
+     * @param string  $label    Button label
+     * @param integer $app_id   Application id
+     * @param integer $owner_id Owner id
+     * @param string  $hash     Hash for button
      *
      * @return array
      */
     public static function buttonVKApps(
         string $label,
         int $app_id,
-        int $owner_id,
-        string $hash,
-        ?array $payload = null
+        int $owner_id = 0,
+        string $hash = ''
     ): array {
         return [
             'action' => [
                 'type' => 'open_app',
-                'label' => $label,
                 'app_id' => $app_id,
                 'owner_id' => $owner_id,
-                'hash' => $hash,
-                'payload' => self::payloadEncode($payload)
+                'label' => $label,
+                'hash' => $hash
             ]
         ];
+    }
+
+    /**
+     * @see self::button
+     */
+    public static function buttonCallback(
+        string $label,
+        string $color = self::WHITE,
+        ?array $payload = null
+    ): array {
+        return self::button($label, $color, $payload, 'callback');
     }
 
     /**
@@ -190,7 +193,7 @@ class Method
     /**
      * @var string
      */
-    protected static $version = '5.110';
+    public static $version = '5.131';
 
     /**
      * Make query to VK API
@@ -215,7 +218,7 @@ class Method
     }
 
     /**
-     * Sending message to community users
+     * Send message to users
      *
      * @param string $access_token Access token
      * @param array  $params       Parameters for messages.send method
@@ -225,37 +228,33 @@ class Method
     public static function messagesSend(string $access_token, array $params): object
     {
         $params['random_id'] = $params['random_id'] ?? 0;
-        $user_ids = $params['user_ids'] ?? null;
-        if (empty($user_ids)) {
+        if (! isset($params['user_ids'])) {
             return self::make($access_token, 'messages.send', $params);
         }
 
-
-        $user_ids = is_array($user_ids) ? $user_ids : explode(',', $user_ids);
+        $user_ids = is_array($params['user_ids'])
+            ? $params['user_ids'] : explode(',', $params['user_ids']);
         $user_ids = array_unique(array_filter($user_ids));
-        $users_count = count($user_ids);
 
-        [$res, $suc] = [[], 0];
-        // j -- количество идов, которые будут взяты
-        for ($i = 0, $j = 100, $c = ceil($users_count / $j); $i < $c; $i++) {
-            $user_ids_str = implode(',', array_slice($user_ids, $i * $j, $j));
-            $params['user_ids'] = $user_ids_str;
+        $successful = 0;
+        $responses = [];
 
-            $req = self::make($access_token, 'messages.send', $params);
-            if ($req->ok === false) {
-                return $req;
-            }
+        $chunked_ids = array_chunk($user_ids, 100);
+        foreach ($chunked_ids as $user_ids) {
+            $params['user_ids'] = implode(',', $user_ids);
 
-            foreach ($req->response as $message) {
-                if (isset($message->error)) {
-                    continue;
-                }
+            $request = self::make($access_token, 'messages.send', $params);
+            if ($request->ok === false) {return $request;}
 
-                $res[] = $message;
-                $suc += 1;
-            }
+            $responses += $request->response;
+            $successful += count(array_column($request->response, 'message_id'));
+            usleep(400000);
         }
-        return (object) [ 'successful' => $suc, 'response' => $res ];
+        return (object) [
+            'ok' => true,
+            'successful' => $successful,
+            'response' => $responses
+        ];
     }
 
     /**
@@ -265,7 +264,6 @@ class Method
      * @param array  $files        Files to upload
      * @param array  $params       Parameters for uploading method
      *
-     * @throws Exception if peer_id parameter is not specified in $params array
      * @throws Exception if count of files in $files array more than 5
      *
      * @return array
@@ -273,13 +271,10 @@ class Method
     public static function uploadMessagesPhoto(
         string $access_token,
         array $files,
-        array $params
+        array $params = []
     ): array {
         if (empty($files)) {
             return array();
-        }
-        if (empty($params['peer_id'])) {
-            throw new \Exception('field `peer_id` is empty');
         }
         if (count($files) > 5) {
             throw new \Exception('too much files (>5)');
@@ -371,7 +366,7 @@ class Method
                 ] + $params
             );
             if ($save_file->ok === false) {
-                return (array) $save_files;
+                return (array) $save_file;
             }
             if (array_key_exists(0, $save_file->response)) {
                 $save_file->response = (object) [
@@ -491,7 +486,7 @@ class Request
      * Make curl request
      *
      * @param string     $url     URL
-     * @param array|null $fields  Post fields
+     * @param mixed      $fields  Post fields
      * @param array|null $headers Headers
      * @param array|null $options Additional options
      *
@@ -499,7 +494,7 @@ class Request
      */
     public static function make(
         string $url,
-        ?array $fields = null,
+        $fields = null,
         ?array $headers = null,
         ?array $options = null
     ): string {
@@ -507,16 +502,18 @@ class Request
         $ch_options = [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36',
+            CURLOPT_USERAGENT => 'php-vkhp library',
             CURLOPT_HTTPHEADER => $headers ?? [],
-        ] + (array) $options;
-        if ($fields !== null) {
-            $ch_options[CURLOPT_POST] = true;
-            $ch_options[CURLOPT_POSTFIELDS] = !$headers
-                ? http_build_query($fields)
-                : $fields;
-        }
+        ] + ($options ?? []);
         curl_setopt_array($ch, $ch_options);
+
+        if (! empty($fields)) {
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => !$headers
+                    ? http_build_query($fields) : $fields
+            ]);
+        }
 
         $response = curl_exec($ch);
         curl_close($ch);
@@ -527,7 +524,7 @@ class Request
      * Same as make(), but returned value goes through json_decode
      *
      * @param string     $url     URL
-     * @param array|null $fields  Post fields
+     * @param mixed      $fields  Post fields
      * @param array|null $headers Headers
      * @param array|null $options Additional options
      *
@@ -537,7 +534,7 @@ class Request
      */
     public static function makeJson(
         string $url,
-        ?array $fields = null,
+        $fields = null,
         ?array $headers = null,
         ?array $options = null
     ): object {
@@ -578,7 +575,7 @@ class Scenarios
      * @param integer $id          Unique id
      * @param boolean $return      Flag for returning object
      *
-     * @return void
+     * @return void|object
      */
     public static function check(string $temp_folder, int $id, bool $return = false)
     {
@@ -635,9 +632,13 @@ class Scenarios
         $this->data[$name] = $value;
     }
 
-    public function __get($name)
+    public function &__get($name)
     {
-        return $this->data[$name] ?? null;
+        if (array_key_exists($name, $this->data)) {
+            return $this->data[$name];
+        }
+
+        return null;
     }
 
     public function __isset($name)
