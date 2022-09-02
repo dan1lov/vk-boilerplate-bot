@@ -28,11 +28,11 @@ switch ($data->type) {
         $payload->c ??= null;
 
         $temp = VKHP\Scenarios::check($settings->tsf, $user_id, true);
-        $is_manager = in_array($user_id, $settings->admin_ids);
+        $is_manager = in_array($user_id, $settings->manager_ids);
         $commands = require_once "$home/files/commands.php";
 
         foreach ($commands as $key => $cmd) {
-            if (($cmd['forAdmin'] && !$is_manager)
+            if (($cmd['forManager'] && !$is_manager)
                 || ($temp !== false && $temp->c !== $key)
                 || ($temp === false
                     && $payload->c !== $key
@@ -69,11 +69,11 @@ switch ($data->type) {
         $payload = $data->object->payload ?? (object)[];
         $cid = $temp->c ?? $payload->c ?? null;
 
-        $is_manager = in_array($user_id, $settings->admin_ids);
+        $is_manager = in_array($user_id, $settings->manager_ids);
         $commands = require_once "$home/files/commands.php";
 
         if (isset($commands[$cid])) {
-            if ($commands[$cid]['forAdmin'] && !$is_manager) {
+            if ($commands[$cid]['forManager'] && !$is_manager) {
                 die('ok');
             }
 

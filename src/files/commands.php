@@ -1,7 +1,7 @@
 <?php return [
     'menu' => [
         'aliases' => [],
-        'forAdmin' => false,
+        'forManager' => false,
         'execute' => function () {
             global $user;
 
@@ -14,7 +14,7 @@
 
     'snack' => [
         'aliases' => [],
-        'forAdmin' => false,
+        'forManager' => false,
         'execute' => function () {
             $message = getTemplate('snack.default');
             $action = 'show_snackbar';
@@ -24,7 +24,7 @@
 
     'link' => [
         'aliases' => [],
-        'forAdmin' => false,
+        'forManager' => false,
         'execute' => function () {
             $link = 'https://vk.com/ffwturtle';
             $action = 'open_link';
@@ -34,7 +34,7 @@
 
     'step' => [
         'aliases' => [],
-        'forAdmin' => false,
+        'forManager' => false,
         'execute' => function () {
             $message = getTemplate('step.default');
             $keyboard = getKeyboardStepDefault();
@@ -44,7 +44,7 @@
 
     'signup' => [
         'aliases' => ['signup', 'sign up'],
-        'forAdmin' => false,
+        'forManager' => false,
         'execute' => function () {
             global $message, $payload, $settings, $temp, $user;
             $action = $temp->a ?? $payload->a ?? null;
