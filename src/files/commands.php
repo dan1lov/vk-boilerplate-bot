@@ -1,24 +1,13 @@
-<?php
-
-use VKHP\Generator as VKHPG;
-
-return [
+<?php return [
     'menu' => [
         'aliases' => [],
         'forAdmin' => false,
         'execute' => function () {
             global $user;
 
-            $username = $user->username ?? 'noname';
-            $usertag = "@id$user->user_id ($username)";
-
-            $message = "Hello, $usertag! \u{1F44B}\nThat's my functions:";
-            $keyboard = VKHPG::keyboard([[
-                VKHPG::buttonCallback('snackbar', VKHPG::WHITE, ['c' => 'snack']),
-                VKHPG::buttonCallback('next step', VKHPG::WHITE, ['c' => 'step']),
-            ], [
-                VKHPG::buttonCallback('sign up', VKHPG::BLUE, ['c' => 'signup']),
-            ]], VKHPG::KM_INLINE);
+            $username = $user->username ?? getTemplate('default.noname');
+            $message = getTemplate('menu.default', $user->user_id, $username);
+            $keyboard = getKeyboardMenuDefault();
 
             return [$message, $keyboard];
         }],
@@ -27,27 +16,30 @@ return [
         'aliases' => [],
         'forAdmin' => false,
         'execute' => function () {
-            return ["This is snackbar! \u{1F36B}", 'show_snackbar'];
+            $message = getTemplate('snack.default');
+            $action = 'show_snackbar';
+
+            return [$message, $action];
         }],
 
     'link' => [
         'aliases' => [],
         'forAdmin' => false,
         'execute' => function () {
-            return ['https://vk.com/ffwturtle', 'open_link'];
+            $link = 'https://vk.com/ffwturtle';
+            $action = 'open_link';
+
+            return [$link, $action];
         }],
 
     'step' => [
         'aliases' => [],
         'forAdmin' => false,
         'execute' => function () {
-            return [
-                "\u{1F47E} second page:",
-                VKHPG::keyboard([[
-                    VKHPG::buttonCallback('open link', VKHPG::WHITE, ['c' => 'link']),
-                    VKHPG::buttonCallback('back', VKHPG::BLUE, ['c' => 'menu']),
-                ]], VKHPG::KM_INLINE)
-            ];
+            $message = getTemplate('step.default');
+            $keyboard = getKeyboardStepDefault();
+
+            return [$message, $keyboard];
         }],
 
     'signup' => [
@@ -55,45 +47,36 @@ return [
         'forAdmin' => false,
         'execute' => function () {
             global $message, $payload, $settings, $temp, $user;
-
             $action = $temp->a ?? $payload->a ?? null;
-            $back_keyboard = VKHPG::keyboard([[
-                VKHPG::buttonCallback('back to menu', VKHPG::BLUE, ['c' => 'menu']),
-            ]], VKHPG::KM_INLINE);
 
             switch ($action) {
                 case 'username':
-                    $username = $message->text ?? 'undefined';
+                    $username = $message->text ?? getTemplate('default.undefined');
                     if (empty($username)) {
                         $temp->save();
-                        return ['your username cannot be empty, try again!'];
+                        return [getTemplate('signup.empty-username')];
                     }
 
                     unset($temp->a);
                     $temp->username = $username;
                     $temp->save();
 
-                    $message = "your username is «{$username}»?";
-                    $keyboard = VKHPG::keyboard([[
-                        VKHPG::buttonCallback('yes', VKHPG::BLUE, ['a' => 'confirm']),
-                        VKHPG::buttonCallback('another', VKHPG::WHITE),
-                    ], [
-                        VKHPG::buttonCallback('cancel', VKHPG::RED, ['a' => 'dismiss']),
-                    ]], VKHPG::KM_INLINE);
+                    $message = getTemplate('signup.username', $username);
+                    $keyboard = getKeyboardSignupUsername();
                     break;
 
                 case 'confirm':
                     $temp->clear();
                     changeUserField('username', $user->user_id, $temp->username);
 
-                    $message = "successfully signup!";
-                    $keyboard = $back_keyboard;
+                    $message = getTemplate('signup.success');
+                    $keyboard = getKeyboardSignupBack();
                     break;
                 case 'dismiss':
                     $temp->clear();
 
-                    $message = "signup cancelled!";
-                    $keyboard = $back_keyboard;
+                    $message = getTemplate('signup.cancel');
+                    $keyboard = getKeyboardSignupBack();
                     break;
 
                 default:
@@ -103,10 +86,9 @@ return [
                     $temp->a = 'username';
                     $temp->save();
 
-                    $message = "please, enter your username with next message.";
-                    $keyboard = VKHPG::keyboard([], VKHPG::KM_ONETIME);
+                    $message = getTemplate('signup.default');
                     break;
             }
-            return [$message, $keyboard];
+            return [$message, $keyboard ?? null];
         }],
 ];

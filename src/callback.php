@@ -54,7 +54,7 @@ switch ($data->type) {
 
         VKHP\Method::messagesSend($config->access_token, [
             'peer_id' => $peer_id,
-            'message' => $parameters[0] ?? 'null',
+            'message' => $parameters[0] ?? getTemplate('default.null'),
             'keyboard' => $parameters[1] ?? null,
             'attachment' => $parameters[2] ?? null,
             'dont_parse_links' => true,

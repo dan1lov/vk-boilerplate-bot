@@ -1,7 +1,4 @@
-<?php
-
-// you can add/remove elements if you need
-return (object)[
+<?php return (object)[
     'group_id' => 1,
     'domain' => 'apiclub',
 

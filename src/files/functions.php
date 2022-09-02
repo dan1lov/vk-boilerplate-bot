@@ -1,7 +1,8 @@
 <?php
 
-use VKHP\Method as VKHPM;
 use Danilov\Database as DB;
+use VKHP\Generator as VKHPG;
+use VKHP\Method as VKHPM;
 
 # -- user
 function userGetOrCreate(int $user_id): object {
@@ -9,11 +10,11 @@ function userGetOrCreate(int $user_id): object {
         die('ok');
     }
 
-    $sql = "SELECT * FROM users WHERE user_id = ?";
+    $sql = 'SELECT * FROM users WHERE user_id = ?';
     $user = DB::getRow($sql, [$user_id]);
 
     if (empty($user)) {
-        DB::execute("INSERT INTO users (user_id) VALUES (?)", [$user_id]);
+        DB::execute('INSERT INTO users (user_id) VALUES (?)', [$user_id]);
         $user = DB::getRow($sql, [$user_id]);
     }
 
@@ -21,7 +22,7 @@ function userGetOrCreate(int $user_id): object {
 }
 
 function getUserField(string $field, int $user_id) {
-    return DB::getOne("SELECT $field FROM users WHERE user_id = ?", [$user_id]);
+    return DB::getOne('SELECT $field FROM users WHERE user_id = ?', [$user_id]);
 }
 
 function changeUserField(string $field, int $user_id, $val): void {
@@ -40,15 +41,15 @@ function processingMessageEvent(object $object, array $event_data): bool {
     }
 
     return VKHPM::make(
-            $GLOBALS['config']->access_token,
-            'messages.sendMessageEventAnswer',
-            [
-                'event_id' => $object->event_id,
-                'user_id' => $object->user_id,
-                'peer_id' => $object->peer_id,
-                'event_data' => json_encode($event_data)
-            ]
-        )->ok ?? false;
+        $GLOBALS['config']->access_token,
+        'messages.sendMessageEventAnswer',
+        [
+            'event_id' => $object->event_id,
+            'user_id' => $object->user_id,
+            'peer_id' => $object->peer_id,
+            'event_data' => json_encode($event_data)
+        ]
+    )->ok ?? false;
 }
 
 function generateEventData(array $res): array {
@@ -79,6 +80,11 @@ function messageEditOrSend(int $user_id, array $message, int $cmi): bool {
 }
 
 # -- other
+function getTemplate(string $name, mixed ...$values): string {
+    global $templates;
+    return sprintf($templates[$name] ?? 'undefined', ...$values);
+}
+
 function strposArray(string $haystack, array $needle): bool|int {
     foreach ($needle as $what) {
         if (($pos = strpos($haystack, $what)) !== false) {
@@ -88,11 +94,83 @@ function strposArray(string $haystack, array $needle): bool|int {
     return false;
 }
 
-function dbConnect(): void {
+function databaseConnect(): void {
     $config = require_once 'config/database.php';
 
     DB::setup(
-        "mysql:host=$config->host;dbname=$config->database;charset=utf8",
-        $config->user, $config->password
+        sprintf(
+            'mysql:host=%s;dbname=%s;charset=utf8mb4',
+            $config->host,
+            $config->database,
+        ),
+        $config->user,
+        $config->password,
     );
+}
+
+# -- keyboard
+function getKeyboardMenuDefault(): string {
+    return VKHPG::keyboard([[
+        VKHPG::buttonCallback(
+            getTemplate('button.snackbar'),
+            VKHPG::WHITE,
+            ['c' => 'snack'],
+        ),
+        VKHPG::buttonCallback(
+            getTemplate('button.next-step'),
+            VKHPG::WHITE,
+            ['c' => 'step'],
+        ),
+    ], [
+        VKHPG::buttonCallback(
+            getTemplate('button.sign-up'),
+            VKHPG::BLUE,
+            ['c' => 'signup'],
+        ),
+    ]], VKHPG::KM_INLINE);
+}
+
+function getKeyboardStepDefault(): string {
+    return VKHPG::keyboard([[
+        VKHPG::buttonCallback(
+            getTemplate('button.open-link'),
+            VKHPG::WHITE,
+            ['c' => 'link'],
+        ),
+    ], [
+        VKHPG::buttonCallback(
+            getTemplate('button.back'),
+            VKHPG::BLUE,
+            ['c' => 'menu'],
+        ),
+    ]], VKHPG::KM_INLINE);
+}
+
+function getKeyboardSignupBack(): string {
+    return VKHPG::keyboard([[
+        VKHPG::buttonCallback(
+            getTemplate('button.back-menu'),
+            VKHPG::BLUE,
+            ['c' => 'menu'],
+        ),
+    ]], VKHPG::KM_INLINE);
+}
+
+function getKeyboardSignupUsername(): string {
+    return VKHPG::keyboard([[
+        VKHPG::buttonCallback(
+            getTemplate('button.yes'),
+            VKHPG::BLUE,
+            ['a' => 'confirm'],
+        ),
+        VKHPG::buttonCallback(
+            getTemplate('button.another'),
+        ),
+    ], [
+        VKHPG::buttonCallback(
+            getTemplate('button.cancel'),
+            VKHPG::RED,
+            ['a' => 'dismiss'],
+        ),
+    ]], VKHPG::KM_INLINE);
 }
