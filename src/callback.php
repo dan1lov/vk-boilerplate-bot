@@ -22,29 +22,28 @@ switch ($data->type) {
         $user_id = $message->from_id;
         $user = userGetOrCreate($user_id);
 
-        $payload = isset($message->payload)
-            ? json_decode($message->payload)
-            : (object)[];
+        $payload = json_decode($message->payload ?? '') ?: (object)[];
         $payload->c ??= null;
 
         $temp = VKHP\Scenarios::check($settings->tsf, $user_id, true);
         $is_manager = in_array($user_id, $settings->manager_ids);
         $commands = require_once "$home/files/commands.php";
 
-        foreach ($commands as $key => $cmd) {
-            if (($cmd['forManager'] && !$is_manager)
-                || ($temp !== false && $temp->c !== $key)
-                || ($temp === false
-                    && $payload->c !== $key
-                    && (array_key_exists($payload->c, $commands)
-                        || strposArray($message_lower, $cmd['aliases']) !== 0
-                    )
-                )
-            ) {
+        foreach ($commands as $key => $command) {
+            $deny = $command['forManager'] && !$is_manager;
+            $strict = $temp !== false && $temp->c !== $key;
+            $wrong_key = $payload->c !== $key;
+
+            $payload_exists = array_key_exists($payload->c, $commands);
+            $word_trigger = strposArray($message_lower, $command['aliases']) !== 0;
+            $correct_this = $payload_exists || $word_trigger;
+            $not_this = $temp === false && $wrong_key && $correct_this;
+
+            if ($deny || $strict || $not_this) {
                 continue;
             }
 
-            $parameters = $cmd['execute']();
+            $parameters = $command['execute']();
             break;
         }
 
