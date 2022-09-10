@@ -1,4 +1,5 @@
 <?php return [
+# -- text on buttons
     'button.another' => 'another',
     'button.back' => 'back',
     'button.back-menu' => 'back to menu',
@@ -9,11 +10,14 @@
     'button.snackbar' => 'snackbar',
     'button.yes' => 'yes',
 
+# -- text for default answers
     'default.noname' => 'noname',
     'default.null' => 'null',
     'default.undefined' => 'undefined',
 
+# -- text for commands
     'menu.default' => "Hello, @id%d (%s)! \u{1F44B}\nThat's my functions:",
+
     'snack.default' => "This is snackbar! \u{1F36B}",
     'step.default' => "\u{1F47E} second page:",
 
