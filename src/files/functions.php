@@ -32,6 +32,8 @@ function changeUserField(string $field, int $user_id, $val): void {
 
 # -- events
 function processingMessageEvent(object $object, array $event_data): bool {
+    global $config;
+
     if (!isset($event_data['type'])) {
         return messageEditOrSend(
             $object->user_id,
@@ -41,7 +43,7 @@ function processingMessageEvent(object $object, array $event_data): bool {
     }
 
     return VKHPM::make(
-        $GLOBALS['config']->access_token,
+        $config->access_token,
         'messages.sendMessageEventAnswer',
         [
             'event_id' => $object->event_id,
@@ -60,6 +62,8 @@ function generateEventData(array $res): array {
 }
 
 function messageEditOrSend(int $user_id, array $message, int $cmi): bool {
+    global $config;
+
     $pars = [
         'peer_id' => $user_id,
         'message' => $message[0],
@@ -68,12 +72,13 @@ function messageEditOrSend(int $user_id, array $message, int $cmi): bool {
     ];
 
     $req = VKHPM::make(
-        $GLOBALS['config']->access_token,
+        $config->access_token,
         'messages.edit',
         $pars + ['conversation_message_id' => $cmi],
     );
+
     if ($req->ok === false) {
-        $req = VKHPM::messagesSend($GLOBALS['config']->access_token, $pars);
+        $req = VKHPM::messagesSend($config->access_token, $pars);
     }
 
     return $req->ok ?? false;
