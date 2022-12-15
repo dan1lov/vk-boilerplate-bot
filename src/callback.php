@@ -51,14 +51,7 @@ switch ($data->type) {
             $parameters = $commands['menu']['execute']();
         }
 
-        VKHP\Method::messagesSend($config->access_token, [
-            'peer_id' => $peer_id,
-            'message' => $parameters[0] ?? getTemplate('default.null'),
-            'keyboard' => $parameters[1] ?? null,
-            'attachment' => $parameters[2] ?? null,
-            'dont_parse_links' => true,
-            'disable_mentions' => true,
-        ]);
+        sendMessageObjectTo($peer_id, validateMessageArray($parameters));
         break;
     case 'message_event':
         $user_id = $data->object->user_id;

@@ -31,6 +31,19 @@ function changeUserField(string $field, int $user_id, $val): void {
 }
 
 # -- events
+function validateMessageArray(array $message): array {
+    if (isAssoc($message)) {
+        return $message;
+    }
+
+    return [
+        'message' => $message[0] ?? getTemplate('default.undefined'),
+        'keyboard' => $message[1] ?? null,
+        'attachment' => $message[2] ?? null,
+        'template' => $message[3] ?? null,
+    ];
+}
+
 function processingMessageEvent(object $object, array $event_data): bool {
     global $config;
 
@@ -38,7 +51,7 @@ function processingMessageEvent(object $object, array $event_data): bool {
         return messageEditOrSend(
             $object->user_id,
             $event_data,
-            $object->conversation_message_id
+            $object->conversation_message_id,
         );
     }
 
@@ -61,30 +74,49 @@ function generateEventData(array $res): array {
     return $type === null ? $res : ['type' => $type, $types[$type] => $res[0]];
 }
 
-function messageEditOrSend(int $user_id, array $message, int $cmi): bool {
+function sendMessageObjectTo(mixed $user_ids, array $message): object {
     global $config;
 
-    $pars = [
-        'peer_id' => $user_id,
-        'message' => $message[0],
-        'attachment' => $message[2] ?? null,
-        'keyboard' => $message[1] ?? null,
-    ];
+    return VKHPM::messagesSend(
+        $config->access_token,
+        $message + [
+            'user_ids' => $user_ids,
+            'dont_parse_links' => true,
+            'disable_mentions' => true,
+        ],
+    );
+}
 
-    $req = VKHPM::make(
+function messageEditOrSend(int $user_id, array $message, int $cmi): int {
+    global $config;
+    $message = validateMessageArray($message);
+
+    $edit = VKHPM::make(
         $config->access_token,
         'messages.edit',
-        $pars + ['conversation_message_id' => $cmi],
+        $message + [
+            'peer_id' => $user_id,
+            'conversation_message_id' => $cmi,
+            'dont_parse_links' => true,
+        ],
     );
 
-    if ($req->ok === false) {
-        $req = VKHPM::messagesSend($config->access_token, $pars);
+    if ($edit->ok === false) {
+        $send = sendMessageObjectTo($user_id, $message);
     }
 
-    return $req->ok ?? false;
+    return $send->response[0]->conversation_message_id ?? ($edit->ok ? $cmi : 0);
 }
 
 # -- other
+function isAssoc(array $array): bool {
+    if (empty($array)) {
+        return false;
+    }
+
+    return array_keys($array) !== range(0, count($array) - 1);
+}
+
 function getTemplate(string $name, mixed ...$values): string {
     global $templates;
     return sprintf($templates[$name] ?? 'undefined', ...$values);
