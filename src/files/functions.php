@@ -79,7 +79,7 @@ function sendMessageObjectTo(mixed $user_ids, array $message): object {
 
     return VKHPM::messagesSend(
         $config->access_token,
-        $message + [
+        validateMessageArray($message) + [
             'user_ids' => $user_ids,
             'dont_parse_links' => true,
             'disable_mentions' => true,
